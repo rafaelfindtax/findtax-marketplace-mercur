@@ -1,0 +1,86 @@
+# =============================================================================
+# Mercur Marketplace — Override de DESENVOLVIMENTO
+#
+# Este arquivo é carregado AUTOMATICAMENTE pelo docker compose junto com o
+# docker-compose.yml base. Sobrescreve o build target para `dev`, monta o
+# código-fonte como volume (hot reload) e roda os comandos `pnpm dev`.
+#
+# Para rodar SEM hot reload (modo prod-like):
+#   docker compose -f docker-compose.yml up -d --build
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Backend (Medusa develop) — hot reload via medusa develop
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      target: dev
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "true"   # garante hot reload em volumes mac/Windows
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+      - backend_medusa_cache:/app/.medusa
+    command: pnpm dev
+
+  # ---------------------------------------------------------------------------
+  # Admin Panel (Vite) — HMR via WebSocket
+  # ---------------------------------------------------------------------------
+  admin-panel:
+    build:
+      target: dev
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./admin-panel:/app
+      - admin_node_modules:/app/node_modules
+    command: pnpm dev -- --host 0.0.0.0 --port 5173
+
+  # ---------------------------------------------------------------------------
+  # Vendor Panel (Vite via launcher próprio)
+  # ---------------------------------------------------------------------------
+  vendor-panel:
+    build:
+      target: dev
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: "7001"
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./vendor-panel:/app
+      - vendor_node_modules:/app/node_modules
+    command: pnpm dev
+
+  # ---------------------------------------------------------------------------
+  # Storefront (Next.js dev)
+  # ---------------------------------------------------------------------------
+  storefront:
+    build:
+      target: dev
+    environment:
+      NODE_ENV: development
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./storefront:/app
+      - storefront_node_modules:/app/node_modules
+      - storefront_next_cache:/app/.next
+    command: pnpm dev
+
+# =============================================================================
+# Volumes anônimos para node_modules / caches — evitam que o bind mount
+# do código-fonte sobrescreva os módulos instalados na imagem.
+# =============================================================================
+volumes:
+  backend_node_modules:
+  backend_medusa_cache:
+  admin_node_modules:
+  vendor_node_modules:
+  storefront_node_modules:
+  storefront_next_cache:

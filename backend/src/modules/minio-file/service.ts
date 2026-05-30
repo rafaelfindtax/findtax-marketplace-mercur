@@ -16,16 +16,25 @@ type InjectedDependencies = {
 
 interface MinioServiceConfig {
   endPoint: string
+  port: number
+  useSSL: boolean
   accessKey: string
   secretKey: string
   bucket?: string
+  publicUrl?: string
 }
 
 export interface MinioFileProviderOptions {
   endPoint: string
+  /** Optional port override. If `endPoint` contains ":<port>", it is parsed automatically. Defaults to 443 when useSSL=true, 80 otherwise. */
+  port?: number
+  /** Whether to use HTTPS. Defaults to true (S3-compatible cloud). Set to false for local MinIO over HTTP. */
+  useSSL?: boolean
   accessKey: string
   secretKey: string
   bucket?: string
+  /** Optional public-facing base URL used to build object URLs (e.g. http://localhost:9100). Falls back to `${proto}://${endPoint}`. */
+  publicUrl?: string
 }
 
 const DEFAULT_BUCKET = 'medusa-media'
@@ -43,22 +52,38 @@ class MinioFileProviderService extends AbstractFileProviderService {
   constructor({ logger }: InjectedDependencies, options: MinioFileProviderOptions) {
     super()
     this.logger_ = logger
+
+    // Parse "host:port" format if provided in endPoint (e.g. "minio:9000")
+    let host = options.endPoint
+    let parsedPort: number | undefined
+    if (host && host.includes(':')) {
+      const [h, p] = host.split(':')
+      host = h
+      parsedPort = parseInt(p, 10)
+    }
+
+    const useSSL = options.useSSL ?? true
+    const port = options.port ?? parsedPort ?? (useSSL ? 443 : 80)
+
     this.config_ = {
-      endPoint: options.endPoint,
+      endPoint: host,
+      port,
+      useSSL,
       accessKey: options.accessKey,
       secretKey: options.secretKey,
-      bucket: options.bucket
+      bucket: options.bucket,
+      publicUrl: options.publicUrl
     }
 
     // Use provided bucket or default
     this.bucket = this.config_.bucket || DEFAULT_BUCKET
-    this.logger_.info(`MinIO service initialized with bucket: ${this.bucket}`)
+    this.logger_.info(`MinIO service initialized with bucket: ${this.bucket} (endpoint: ${useSSL ? 'https' : 'http'}://${host}:${port})`)
 
-    // Initialize Minio client with hardcoded SSL settings
+    // Initialize Minio client
     this.client = new Client({
       endPoint: this.config_.endPoint,
-      port: 443,
-      useSSL: true,
+      port: this.config_.port,
+      useSSL: this.config_.useSSL,
       accessKey: this.config_.accessKey,
       secretKey: this.config_.secretKey
     })
@@ -176,8 +201,14 @@ class MinioFileProviderService extends AbstractFileProviderService {
         }
       )
 
-      // Generate URL using the endpoint and bucket
-      const url = `https://${this.config_.endPoint}/${this.bucket}/${fileKey}`
+      // Generate URL using the public-facing base URL (or fallback to endpoint)
+      const baseUrl = this.config_.publicUrl
+        ?? `${this.config_.useSSL ? 'https' : 'http'}://${this.config_.endPoint}${
+          (this.config_.useSSL && this.config_.port === 443) || (!this.config_.useSSL && this.config_.port === 80)
+            ? ''
+            : `:${this.config_.port}`
+        }`
+      const url = `${baseUrl.replace(/\/$/, '')}/${this.bucket}/${fileKey}`
 
       this.logger_.info(`Successfully uploaded file ${fileKey} to MinIO bucket ${this.bucket}`)
 

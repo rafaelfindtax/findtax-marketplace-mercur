@@ -380,3 +380,51 @@ This project is based on MercurJS and MedusaJS. Please refer to their respective
 5. Visit the storefront at http://localhost:3000
 
 Happy selling! 🚀
+
+
+####################### valida o algolia ##########
+
+
+cd /Users/rafaelalmeida/Desenv/marketplace
+
+# 1. Recria backend + storefront para pegar as novas envs
+docker compose up -d --force-recreate backend storefront
+
+# 2. Aguarde o backend estabilizar (~30s)
+sleep 30
+docker compose logs --tail=10 backend | grep -iE "ready|error" | tail -5
+
+# 3. Cria o índice "products" na NOVA conta Algolia (idempotente)
+make algolia-init
+# Esperado: [ALGOLIA] Index 'products' not found, creating... → created and configured successfully
+
+# 4. Verifica que o backend está enxergando a nova conta
+make algolia-status
+# Esperado: { "appId": "3L5FRXT9HE", "productIndex": true }
+
+# 5. Re-sincroniza TODOS os produtos para a nova conta
+make algolia-sync
+# Esperado: { "message": "Sync in progress" }
+
+# 6. Aguarde alguns segundos e valide quantos produtos chegaram
+sleep 8
+curl -s -X POST 'https://3L5FRXT9HE-dsn.algolia.net/1/indexes/products/query' \
+  -H 'X-Algolia-Application-Id: 3L5FRXT9HE' \
+  -H 'X-Algolia-API-Key: 8ad3b19cee5efbaaa1cef313c87660c7' \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"","hitsPerPage":0}' | jq '{total_indexado: .nbHits}'
+# Esperado: ~39 (total dos produtos publicados)
+
+# 7. Valida com o filtro EXATO que o storefront usa
+curl -s -X POST 'https://3L5FRXT9HE-dsn.algolia.net/1/indexes/products/query' \
+  -H 'X-Algolia-Application-Id: 3L5FRXT9HE' \
+  -H 'X-Algolia-API-Key: 8ad3b19cee5efbaaa1cef313c87660c7' \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"","filters":"NOT seller:null AND NOT seller.store_status:SUSPENDED AND supported_countries:br","hitsPerPage":3}' \
+  | jq '{nbHits, top3: [.hits[:3][] | {title, seller: .seller.name}]}'
+# Esperado: nbHits ~35 (39 menos os de Revizia + Tax Stragegy que estão SUSPENDED)
+
+# 8. Teste end-to-end no browser
+open http://localhost:3000
+# Esperado: vitrine FINDTAX exibindo os produtos. No DevTools → Network,
+# requests para "3l5frxt9he-dsn.algolia.net" confirmam a nova conta.

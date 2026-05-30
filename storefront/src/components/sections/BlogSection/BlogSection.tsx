@@ -4,29 +4,29 @@ import { BlogCard } from '@/components/organisms';
 export const blogPosts: BlogPost[] = [
   {
     id: 1,
-    title: "Summer's Most Elegant Accessories",
+    title: 'Tax Transformation Report',
     excerpt:
-      "Discover this season's most sophisticated accessories that blend timeless elegance with modern design.",
-    image: '/images/blog/post-1.jpg',
-    category: 'ACCESSORIES',
+      'Faça parte do primeiro relatório de Tax Transformation do Brasil!',
+    image: 'https://findtax.com.br/hubfs/Tax%20Transformation%20Report.png',
+    category: 'RELATÓRIO',
     href: '#',
   },
   {
     id: 2,
-    title: 'The Season’s Hottest Trends',
+    title: 'Conteúdo Tributário',
     excerpt:
-      'From bold colors to nostalgic silhouettes, explore the must-have looks defining this season’s fashion narrative.',
-    image: '/images/blog/post-2.jpg',
-    category: 'STYLE GUIDE',
+      'Informativos, blog exclusivo, agenda de eventos, cursos, mentoria e redes de parceiros. Receba todas as novidades de forma prática e amigável.',
+    image: 'https://findtax.com.br/hs-fs/hubfs/Icones%204%20m1.png',
+    category: 'CONTEÚDO',
     href: '#',
   },
   {
     id: 3,
-    title: 'Minimalist Outerwear Trends',
+    title: 'Benefícios Exclusivos',
     excerpt:
-      'Explore the latest minimalist outerwear pieces that combine functionality with clean aesthetics.',
-    image: '/images/blog/post-3.jpg',
-    category: 'TRENDS',
+      'Rede em expansão oferece vantagens, descontos em cursos e eventos, condições especiais em softwares e serviços.',
+    image: 'https://findtax.com.br/hs-fs/hubfs/Icones%201%20m1-1.png',
+    category: 'BENEFÍCIOS',
     href: '#',
   },
 ];
@@ -36,7 +36,7 @@ export function BlogSection() {
     <section className='bg-tertiary container'>
       <div className='flex items-center justify-between mb-12'>
         <h2 className='heading-lg text-tertiary'>
-          STAY UP TO DATE
+          FIQUE POR DENTRO
         </h2>
       </div>
       <div className='grid grid-cols-1 lg:grid-cols-3'>

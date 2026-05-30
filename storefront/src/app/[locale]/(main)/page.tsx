@@ -50,7 +50,7 @@ export async function generateMetadata({
 
   const title = "Home"
   const description =
-    "Welcome to Mercur B2C Demo! Create a modern marketplace that you own and customize in every aspect with high-performance, fully customizable storefront."
+    "FindTax — Marketplace tributário. Todas as soluções para a sua jornada de Tax Transformation em um só lugar: softwares, consultorias, auditorias e conteúdo."
   const ogImage = "/B2C_Storefront_Open_Graph.png"
   const canonical = `${baseUrl}/${locale}`
 
@@ -161,24 +161,24 @@ export default async function Home({
       />
 
       <Hero
-        image="/images/hero/Image.jpg"
-        heading="Snag your style in a flash"
-        paragraph="Buy, sell, and discover pre-loved gems from the trendiest brands."
+        image="https://findtax.com.br/hubfs/tax%20(24).png"
+        heading="#taxtransformation"
+        paragraph="Todas as soluções tributárias aqui na FIND. Para embarcar na jornada da transformação digital e enfrentar os desafios da Reforma Tributária, construímos um ambiente completo onde as suas necessidades recebem o melhor direcionamento de soluções!"
         buttons={[
-          { label: "Buy now", path: "/categories" },
+          { label: "Começar gratuitamente", path: "https://app.findtax.com.br/" },
           {
-            label: "Sell now",
+            label: "Tenho uma solução",
             path:
               process.env.NEXT_PUBLIC_VENDOR_URL ||
-              "https://vendor.mercurjs.com",
+              "https://app.findtax.com.br/cadastro",
           },
         ]}
       />
       <div className="px-4 lg:px-8 w-full">
-        <HomeProductSection heading="trending listings" locale={locale} home />
+        <HomeProductSection heading="soluções em destaque" locale={locale} home />
       </div>
       <div className="px-4 lg:px-8 w-full">
-        <HomeCategories heading="SHOP BY CATEGORY" />
+        <HomeCategories heading="CATEGORIAS DE SOLUÇÕES" />
       </div>
       <BannerSection />
       <ShopByStyleSection />

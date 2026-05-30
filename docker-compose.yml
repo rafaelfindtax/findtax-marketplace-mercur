@@ -1,0 +1,223 @@
+# =============================================================================
+# Mercur Marketplace — Compose base (prod-ready)
+#
+# Este arquivo é o "alvo de produção" e é projetado para ser portado para
+# AWS futuramente (ECR + ECS/Fargate ou EKS + RDS + ElastiCache + S3).
+#
+# Para desenvolvimento local com hot reload, o docker-compose.override.yml
+# é carregado automaticamente e sobrescreve targets/volumes/commands.
+#
+# Uso:
+#   docker compose up -d                # dev (com override)
+#   docker compose -f docker-compose.yml up -d   # apenas base (prod-like)
+# =============================================================================
+
+name: mercur
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — armazena tudo do Medusa (produtos, pedidos, vendors, etc.)
+  # Em AWS, será substituído por RDS/Aurora PostgreSQL.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: mercur-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-mercurjs}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-mercurjs}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - mercur-net
+
+  # ---------------------------------------------------------------------------
+  # Redis — cache, filas (BullMQ), event bus do Medusa.
+  # Em AWS, será substituído por ElastiCache Redis.
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: mercur-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - mercur-net
+
+  # ---------------------------------------------------------------------------
+  # MinIO — storage S3-compatível (uploads, imagens de produtos).
+  # Em AWS, será substituído por S3 + IAM (mesma API, sem alterar código).
+  # API exposta no host na 9100 (9000 está com backend); console na 9101.
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: mercur-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "${MINIO_API_PORT:-9100}:9000"
+      - "${MINIO_CONSOLE_PORT:-9101}:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - mercur-net
+
+  # ---------------------------------------------------------------------------
+  # MinIO Init — cria o bucket inicial e libera leitura anônima (uploads).
+  # Roda uma vez e termina (restart: no).
+  # ---------------------------------------------------------------------------
+  minio-init:
+    image: minio/mc:latest
+    container_name: mercur-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
+      mc mb --ignore-existing local/${MINIO_BUCKET:-medusa-media};
+      mc anonymous set download local/${MINIO_BUCKET:-medusa-media};
+      echo 'MinIO bucket ${MINIO_BUCKET:-medusa-media} pronto.';
+      "
+    restart: "no"
+    networks:
+      - mercur-net
+
+  # ---------------------------------------------------------------------------
+  # Backend — MedusaJS v2 + plugins MercurJS (B2C marketplace).
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      target: runtime
+    image: mercur/backend:${IMAGE_TAG:-latest}
+    container_name: mercur-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-mercurjs}?sslmode=disable
+      DATABASE_SSL: "false"
+      # PGSSLMODE é lido nativamente pela libpq/driver pg, mais defensivo
+      PGSSLMODE: disable
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-medusa-media}
+    ports:
+      - "${BACKEND_PORT:-9000}:9000"
+    networks:
+      - mercur-net
+
+  # ---------------------------------------------------------------------------
+  # Admin Panel — dashboard do dono da plataforma.
+  # ---------------------------------------------------------------------------
+  admin-panel:
+    build:
+      context: ./admin-panel
+      target: runtime
+    image: mercur/admin-panel:${IMAGE_TAG:-latest}
+    container_name: mercur-admin-panel
+    restart: unless-stopped
+    depends_on:
+      - backend
+    env_file:
+      - ./admin-panel/.env
+    ports:
+      - "${ADMIN_PORT:-5173}:5173"
+    networks:
+      - mercur-net
+
+  # ---------------------------------------------------------------------------
+  # Vendor Panel — dashboard de vendedores.
+  # ---------------------------------------------------------------------------
+  vendor-panel:
+    build:
+      context: ./vendor-panel
+      target: runtime
+    image: mercur/vendor-panel:${IMAGE_TAG:-latest}
+    container_name: mercur-vendor-panel
+    restart: unless-stopped
+    depends_on:
+      - backend
+    env_file:
+      - ./vendor-panel/.env
+    environment:
+      MEDUSA_BACKEND_URL: http://backend:9000
+    ports:
+      - "${VENDOR_PORT:-7001}:7001"
+    networks:
+      - mercur-net
+
+  # ---------------------------------------------------------------------------
+  # Storefront — loja Next.js voltada ao consumidor final.
+  # ---------------------------------------------------------------------------
+  storefront:
+    build:
+      context: ./storefront
+      target: runtime
+    image: mercur/storefront:${IMAGE_TAG:-latest}
+    container_name: mercur-storefront
+    restart: unless-stopped
+    depends_on:
+      - backend
+    env_file:
+      - ./storefront/.env.local
+    environment:
+      MEDUSA_BACKEND_URL: http://backend:9000
+    ports:
+      - "${STOREFRONT_PORT:-3000}:3000"
+    networks:
+      - mercur-net
+
+# =============================================================================
+# Volumes nomeados — persistem dados entre `docker compose down/up`.
+# =============================================================================
+volumes:
+  postgres_data:
+    name: mercur_postgres_data
+  redis_data:
+    name: mercur_redis_data
+  minio_data:
+    name: mercur_minio_data
+
+# =============================================================================
+# Rede interna — todos os serviços se enxergam pelo nome do serviço.
+# =============================================================================
+networks:
+  mercur-net:
+    name: mercur-net
+    driver: bridge

@@ -50,11 +50,12 @@ export const Header = async () => {
         <div className="flex lg:justify-center lg:w-1/3 items-center pl-4 lg:pl-0">
           <LocalizedClientLink href="/" className="text-2xl font-bold">
             <Image
-              src="/Logo.svg"
-              width={126}
+              src="/logo-find.png"
+              width={88}
               height={40}
-              alt="Logo"
+              alt="FindTax Marketplace"
               priority
+              className="max-h-9 lg:max-h-[30px] w-auto"
             />
           </LocalizedClientLink>
         </div>

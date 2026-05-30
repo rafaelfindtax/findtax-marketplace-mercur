@@ -17,7 +17,7 @@ export const listCategories = async ({
       product_categories: HttpTypes.StoreProductCategory[]
     }>("/store/product-categories", {
       query: {
-        fields: "handle, name, rank, parent_category_id",
+        fields: "id, handle, name, rank, parent_category_id",
         limit,
         ...query,
       },
@@ -26,8 +26,22 @@ export const listCategories = async ({
     })
     .then(({ product_categories }) => product_categories)
 
-  const parentCategories = categories.filter(({ name }) =>
-    headingCategories.includes(name.toLowerCase())
+  // Categorias que realmente têm produtos — para não exibir categorias vazias no menu.
+  const { products } = await sdk.client.fetch<{
+    products: { categories?: { id: string }[] }[]
+  }>("/store/products", {
+    query: { fields: "categories.id", limit: 1000 },
+    cache: "force-cache",
+    next: { revalidate: 3600 },
+  })
+  const categoryIdsWithProducts = new Set(
+    products.flatMap((p) => (p.categories || []).map((c) => c.id))
+  )
+
+  const parentCategories = categories.filter(
+    ({ id, name }) =>
+      headingCategories.includes(name.toLowerCase()) &&
+      categoryIdsWithProducts.has(id)
   )
 
   const childrenCategories = categories.filter(
@@ -36,7 +50,8 @@ export const listCategories = async ({
 
   return {
     categories: childrenCategories.filter(
-      ({ parent_category_id }) => !parent_category_id
+      ({ id, parent_category_id }) =>
+        !parent_category_id && categoryIdsWithProducts.has(id)
     ),
     parentCategories: parentCategories,
   }

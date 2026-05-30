@@ -9,19 +9,19 @@ export const BannerSection = () => {
         <div className="py-6 px-6 flex flex-col h-full justify-between border border-secondary rounded-sm">
           <div className="mb-8 lg:mb-48">
             <span className="text-sm inline-block px-4 py-1 border border-secondary rounded-sm">
-              #COLLECTION
+              #MARKETPLACETRIBUTARIO
             </span>
             <h2 className="display-sm">
-              BOHO VIBES: WHERE COMFORT MEETS CREATIVITY
+              ENCONTRE SOLUÇÕES E SEJA ENCONTRADO!
             </h2>
             <p className="text-lg text-tertiary max-w-lg">
-              Discover boho styles that inspire adventure and embrace the beauty
-              of the unconventional.
+              O mundo tributário apresenta desafios, mas também oportunidades.
+              Aqui é onde a conexão entre a demanda e a solução se concretiza!
             </p>
           </div>
-          <LocalizedClientLink href="/collections/boho">
+          <LocalizedClientLink href="/categories">
             <Button size="large" className="w-fit bg-secondary/10">
-              EXPLORE
+              EXPLORAR
             </Button>
           </LocalizedClientLink>
         </div>
@@ -29,8 +29,8 @@ export const BannerSection = () => {
           <Image
             loading="lazy"
             fetchPriority="high"
-            src="/images/banner-section/Image.jpg"
-            alt="Boho fashion collection - Model wearing a floral dress with yellow boots"
+            src="https://findtax.com.br/hs-fs/hubfs/tax%20(13)-1.png"
+            alt="Marketplace tributário FindTax — onde a demanda encontra a solução"
             width={700}
             height={600}
             className="object-cover object-top rounded-sm"

@@ -37,17 +37,16 @@ export const ProductCard = ({
           aria-label={`View ${productName}`}
           title={`View ${productName}`}
         >
-          <div className="overflow-hidden rounded-sm w-full h-full flex justify-center align-center ">
+          <div className="relative overflow-hidden rounded-sm w-full h-full">
             {product.thumbnail ? (
               <Image
                 priority
                 fetchPriority="high"
                 src={decodeURIComponent(product.thumbnail)}
                 alt={`${productName} image`}
-                width={100}
-                height={100}
+                fill
                 sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-                className="object-cover aspect-square w-full object-center h-full lg:group-hover:-mt-14 transition-all duration-300 rounded-xs"
+                className="object-contain object-center p-6 transition-transform duration-300 lg:group-hover:scale-105 rounded-xs"
               />
             ) : (
               <Image
@@ -55,9 +54,9 @@ export const ProductCard = ({
                 fetchPriority="high"
                 src="/images/placeholder.svg"
                 alt={`${productName} image placeholder`}
-                width={100}
-                height={100}
+                fill
                 sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                className="object-contain object-center p-6"
               />
             )}
           </div>

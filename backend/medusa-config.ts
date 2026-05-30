@@ -6,6 +6,12 @@ loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
+    // Força SSL desabilitado em dev (Postgres alpine não tem SSL).
+    // Em produção/AWS, defina DATABASE_SSL=true para usar SSL com self-signed.
+    databaseDriverOptions:
+      process.env.DATABASE_SSL === 'true'
+        ? { ssl: { rejectUnauthorized: false } }
+        : { ssl: false, connection: { ssl: false } },
     ...(process.env.REDIS_URL ? { redisUrl: process.env.REDIS_URL } : {}),
     http: {
       storeCors: process.env.STORE_CORS!,
@@ -59,9 +65,12 @@ module.exports = defineConfig({
             id: 'minio',
             options: {
               endPoint: process.env.MINIO_ENDPOINT,
+              port: process.env.MINIO_PORT ? parseInt(process.env.MINIO_PORT, 10) : undefined,
+              useSSL: process.env.MINIO_USE_SSL ? process.env.MINIO_USE_SSL === 'true' : undefined,
               accessKey: process.env.MINIO_ACCESS_KEY,
               secretKey: process.env.MINIO_SECRET_KEY,
-              bucket: process.env.MINIO_BUCKET // Optional, defaults to 'medusa-media'
+              bucket: process.env.MINIO_BUCKET, // Optional, defaults to 'medusa-media'
+              publicUrl: process.env.MINIO_PUBLIC_URL // Optional, used to build public file URLs
             }
           }] : [{
             resolve: '@medusajs/medusa/file-local',

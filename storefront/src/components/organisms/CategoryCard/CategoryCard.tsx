@@ -1,11 +1,18 @@
+"use client"
+
 import LocalizedClientLink from "@/components/molecules/LocalizedLink/LocalizedLink"
 import Image from "next/image"
+import { useState } from "react"
+
+const FALLBACK_IMAGE = "/images/placeholder.svg"
 
 export function CategoryCard({
   category,
 }: {
   category: { name: string; handle: string }
 }) {
+  const [src, setSrc] = useState(`/images/categories/${category.handle}.png`)
+
   return (
     <LocalizedClientLink
       href={`/categories/${category.handle}`}
@@ -14,7 +21,8 @@ export function CategoryCard({
       <div className="flex relative aspect-square overflow-hidden w-[200px]">
         <Image
           loading="lazy"
-          src={`/images/categories/${category.handle}.png`}
+          src={src}
+          onError={() => setSrc(FALLBACK_IMAGE)}
           alt={`category - ${category.name}`}
           width={200}
           height={200}

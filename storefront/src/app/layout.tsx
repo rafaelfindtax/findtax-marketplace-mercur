@@ -1,15 +1,15 @@
 import type { Metadata } from "next"
-import { Funnel_Display } from "next/font/google"
+import { Ubuntu } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@medusajs/ui"
 import Head from "next/head"
 import { retrieveCart } from "@/lib/data/cart"
 import { Providers } from "./providers"
 
-const funnelDisplay = Funnel_Display({
+const ubuntu = Ubuntu({
   variable: "--font-funnel-sans",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["300", "400", "500", "700"],
 })
 
 export const metadata: Metadata = {
@@ -118,7 +118,7 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://api.mercurjs.com" />
       </Head>
       <body
-        className={`${funnelDisplay.className} antialiased bg-primary text-secondary relative`}
+        className={`${ubuntu.className} antialiased bg-primary text-secondary relative`}
       >
         <Providers cart={cart}>{children}</Providers>
         <Toaster position="top-right" />

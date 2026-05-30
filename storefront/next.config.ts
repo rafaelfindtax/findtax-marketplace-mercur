@@ -16,40 +16,21 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
+      // Logos de sellers/produtos vêm de hosts arbitrários (CDNs diversos).
+      // Wildcard libera qualquer host HTTPS para evitar allowlist interminável.
       {
         protocol: "https",
-        hostname: "medusa-public-images.s3.eu-west-1.amazonaws.com",
+        hostname: "**",
       },
-      {
-        protocol: "https",
-        hostname: "mercur-connect.s3.eu-central-1.amazonaws.com",
-      },
-      {
-        protocol: "https",
-        hostname: "api.mercurjs.com",
-      },
+      // Imagens locais / MinIO em dev.
       {
         protocol: "http",
         hostname: "localhost",
       },
-      {
-        protocol: "https",
-        hostname: "api-sandbox.mercurjs.com",
-        pathname: "/static/**",
-      },
-      {
-        protocol: "https",
-        hostname: "i.imgur.com",
-      },
-      {
-        protocol: "https",
-        hostname: "s3.eu-central-1.amazonaws.com",
-      },
-      ...(process.env.NEXT_PUBLIC_MINIO_ENDPOINT ? [{
-        protocol: "https",
-        hostname: process.env.NEXT_PUBLIC_MINIO_ENDPOINT,
-      }] : []),
     ],
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    qualities: [50, 70, 75, 85],
   },
 }
 

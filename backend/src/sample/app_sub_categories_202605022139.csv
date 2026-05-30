@@ -1,0 +1,10 @@
+"app_sub_category_uuid","name","description","app_category_uuid"
+f38220c8-c12f-42a2-a3f7-963920ba1bea,Software de Gestão,Soluções para gestão empresarial,"3bc326f3-6992-4d69-83a4-7ceb03b4e6c4"
+"059b82b0-6111-4df2-be80-76a17ba8f22e",Software Contábil e Fiscal,Ferramentas para contabilidade e gestão fiscal,"3bc326f3-6992-4d69-83a4-7ceb03b4e6c4"
+"8878f903-27b3-46f0-b4aa-e71ae68fd2c9",Consultorias,Serviços de consultoria empresarial e contábil,"2f933d40-314e-436d-ae09-1afa8537ef7a"
+"13322de7-1087-4731-a6fa-988cf24d717d",Cursos Contábeis,Formações especializadas em contabilidade,eb1fec79-c338-4cfa-ae51-685c89670d53
+"8387b88d-f776-4791-a522-2b2d6b057d64",Leis de Incentivo,Leis de incentivo para distinação de impostos,"54703a28-499a-4e9a-95ee-ec81af19b664"
+bf5b040f-f9b2-4d36-9c95-709a28a9c2e3,Licitações,Licitações do governo,"54703a28-499a-4e9a-95ee-ec81af19b664"
+"28b54349-86f5-4916-a028-00a7b7be3368",RFPs,RFPs abertas para empresas,"54703a28-499a-4e9a-95ee-ec81af19b664"
+"7e65e8df-2f70-45a0-8c48-a24ceca42e1d",ERPs,Empresas de ERPs de Gestão,"8673e071-1348-431a-b2d6-068573eb48eb"
+"62abdfd4-5e4e-4213-a516-b02337f48e3a",Soluções Fiscais,Tecnologia Fiscal e Tributaria,"8673e071-1348-431a-b2d6-068573eb48eb"
