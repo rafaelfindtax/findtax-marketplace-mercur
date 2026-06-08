@@ -1,12 +1,14 @@
 "use client"
 
 import Image from "next/image"
-import { Button } from "@/components/atoms"
+import { Button, StarRating } from "@/components/atoms"
 import { HttpTypes } from "@medusajs/types"
 import { BaseHit, Hit } from "instantsearch.js"
 import clsx from "clsx"
 import LocalizedClientLink from "@/components/molecules/LocalizedLink/LocalizedLink"
 import { getProductPrice } from "@/lib/helpers/get-product-price"
+import { getSellerRating } from "@/lib/helpers/seller-rating"
+import { SellerProps } from "@/types/seller"
 
 export const ProductCard = ({
   product,
@@ -24,6 +26,23 @@ export const ProductCard = ({
   })
 
   const productName = String(product.title || "Product")
+
+  // Seller review stars: always rendered by default. The rating defaults to 0
+  // (=> 5 light-grey stars) when there are no reviews or the data is
+  // missing/invalid, and fills automatically as reviews accrue. Any failure
+  // falls back to the default grey state — the card is never left starless and
+  // the listing never breaks (FR-001/FR-003/FR-005).
+  const sellerRating: number = (() => {
+    try {
+      const seller = (
+        api_product as HttpTypes.StoreProduct & { seller?: SellerProps }
+      ).seller
+
+      return getSellerRating(seller?.reviews).rating
+    } catch {
+      return 0
+    }
+  })()
 
   return (
     <div
@@ -78,6 +97,9 @@ export const ProductCard = ({
       >
         <div className="flex justify-between p-4">
           <div className="w-full">
+            <div className="mb-2">
+              <StarRating starSize={16} rate={sellerRating} />
+            </div>
             <h3 className="heading-sm truncate">{product.title}</h3>
             <div className="flex items-center gap-2 mt-2">
               <p className="font-medium">{cheapestPrice?.calculated_price}</p>

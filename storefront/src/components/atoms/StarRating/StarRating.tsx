@@ -18,7 +18,11 @@ export const StarRating = ({
             ? disabled
               ? tailwindConfig.theme.extend.colors.disabled
               : tailwindConfig.theme.extend.colors.primary
-            : tailwindConfig.theme.extend.colors.action.on.primary
+            : // Empty stars: light grey ("cinza claro") so the default/unrated
+              // state is visible on light backgrounds. Previously this used the
+              // near-white `action.on.primary` (--brand-25 = #fff), invisible on
+              // white cards. Uses --bg-disabled (neutral-200, light grey).
+              "rgba(var(--bg-disabled))"
         return <StarIcon size={starSize} key={i} color={starColor} />
       })}
     </div>

@@ -428,3 +428,9 @@ curl -s -X POST 'https://3L5FRXT9HE-dsn.algolia.net/1/indexes/products/query' \
 open http://localhost:3000
 # Esperado: vitrine FINDTAX exibindo os produtos. No DevTools → Network,
 # requests para "3l5frxt9he-dsn.algolia.net" confirmam a nova conta.
+
+
+
+#install  Spec kit  into the project folder
+uvx --from git+https://github.com/github/spec-kit  specify init --here
+

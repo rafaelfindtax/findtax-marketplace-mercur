@@ -4,6 +4,16 @@ import Medusa from "@medusajs/js-sdk"
 const MEDUSA_BACKEND_URL =
   process.env.MEDUSA_BACKEND_URL || "http://localhost:9000"
 
+// Fail loud instead of letting every /store request 400 with an opaque RSC error.
+// Medusa v2 rejects all storefront requests without a valid publishable key.
+if (!process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY) {
+  throw new Error(
+    "NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY is not set — every /store request will 400 " +
+      "('Publishable API key required'). Set it in storefront/.env.local to the key's " +
+      "`pk_...` token (not the `apk_...` id) and recreate the storefront container."
+  )
+}
+
 export const sdk = new Medusa({
   baseUrl: MEDUSA_BACKEND_URL,
   debug: process.env.NODE_ENV === "development",

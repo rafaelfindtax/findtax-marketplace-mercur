@@ -1,0 +1,107 @@
+%% Infraestrutura LOCAL (Docker Compose)
+%% Stack inteiro num único host Docker — rede bridge "default" do Compose.
+%% Volumes nomeados para Postgres/Redis/MinIO · bind-mounts para hot-reload do código.
+
+graph TB
+  %% ===== Desenvolvedor / browser =====
+  Dev[👨‍💻 Dev macOS<br/>browser + IDE]
+
+  %% ===== Host =====
+  subgraph Host["🖥 Host (macOS / Docker Desktop)"]
+    direction TB
+
+    subgraph Net["🕸 Docker network: marketplace_default (bridge)"]
+      direction TB
+
+      %% ===== Frontends =====
+      subgraph FE["Frontends (dev · hot reload)"]
+        Storefront["📦 storefront<br/>node:22 alpine · Next.js 15<br/>:3000 → host"]
+        AdminPanel["📦 admin-panel<br/>node:22 alpine · Vite<br/>:5173 → host"]
+        VendorPanel["📦 vendor-panel<br/>node:22 alpine · Vite<br/>:7001 → host"]
+      end
+
+      %% ===== Backend =====
+      Backend["📦 backend<br/>node:22 alpine · MedusaJS 2.10<br/>:9000 → host<br/>health: /health"]
+
+      %% ===== Infra =====
+      subgraph InfraSvc["Infra"]
+        Postgres[("📦 postgres<br/>postgres:16-alpine<br/>:5432 (interno)<br/>db: mercurjs")]
+        Redis[("📦 redis<br/>redis:7-alpine<br/>:6379 (interno)")]
+        MinIO["📦 minio<br/>minio/minio<br/>API :9100 · Console :9101<br/>bucket: medusa"]
+        MinioInit["📦 minio-init<br/>(one-shot)<br/>cria bucket + policy"]
+      end
+    end
+
+    %% ===== Volumes =====
+    subgraph Vols["💾 Volumes nomeados"]
+      VolPG[(postgres-data)]
+      VolRD[(redis-data)]
+      VolMN[(minio-data)]
+      VolBeNm[(backend-node_modules)]
+      VolStNm[(storefront-node_modules)]
+      VolAdNm[(admin-panel-node_modules)]
+      VolVnNm[(vendor-panel-node_modules)]
+    end
+
+    %% ===== Bind mounts (código) =====
+    subgraph Code["📁 Bind mounts (host → container)"]
+      SrcRepo["/Users/rafaelalmeida/Desenv/marketplace<br/>(backend · admin-panel · vendor-panel · storefront)"]
+    end
+  end
+
+  %% ===== Externo =====
+  Algolia[("☁️ Algolia<br/>SaaS · HTTPS<br/>app: 3L5FRXT9HE")]
+
+  %% ===== Acessos do dev =====
+  Dev -->|http :3000| Storefront
+  Dev -->|http :5173| AdminPanel
+  Dev -->|http :7001| VendorPanel
+  Dev -->|http :9000| Backend
+  Dev -->|http :9101 console| MinIO
+
+  %% ===== FE → BE (DNS interno do Docker) =====
+  Storefront -->|"http://backend:9000"| Backend
+  AdminPanel -->|"http://backend:9000"| Backend
+  VendorPanel -->|"http://backend:9000"| Backend
+  Storefront -.->|HTTPS · search direto| Algolia
+
+  %% ===== BE → Infra (DNS interno) =====
+  Backend -->|"postgres://postgres@postgres:5432/mercurjs<br/>?sslmode=disable"| Postgres
+  Backend -->|"redis://redis:6379"| Redis
+  Backend -->|"http://minio:9000 S3 API<br/>publicUrl http://localhost:9100"| MinIO
+  Backend -->|HTTPS · admin key| Algolia
+
+  %% ===== Init =====
+  MinioInit -->|mc mb / policy| MinIO
+
+  %% ===== Persistência =====
+  Postgres --- VolPG
+  Redis --- VolRD
+  MinIO --- VolMN
+  Backend --- VolBeNm
+  Storefront --- VolStNm
+  AdminPanel --- VolAdNm
+  VendorPanel --- VolVnNm
+
+  %% ===== Código montado (hot reload) =====
+  SrcRepo -.bind mount.-> Backend
+  SrcRepo -.bind mount.-> Storefront
+  SrcRepo -.bind mount.-> AdminPanel
+  SrcRepo -.bind mount.-> VendorPanel
+
+  %% ===== Estilo =====
+  classDef fe     fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+  classDef be     fill:#e0e7ff,stroke:#4338ca,color:#1e1b4b
+  classDef infra  fill:#dcfce7,stroke:#16a34a,color:#14532d
+  classDef vol    fill:#fef9c3,stroke:#ca8a04,color:#713f12
+  classDef ext    fill:#fce7f3,stroke:#db2777,color:#831843
+  classDef code   fill:#f1f5f9,stroke:#475569,color:#0f172a
+  classDef user   fill:#fef3c7,stroke:#d97706,color:#78350f
+
+  class Storefront,AdminPanel,VendorPanel fe
+  class Backend be
+  class Postgres,Redis,MinIO,MinioInit infra
+  class VolPG,VolRD,VolMN,VolBeNm,VolStNm,VolAdNm,VolVnNm vol
+  class Algolia ext
+  class SrcRepo code
+  class Dev user

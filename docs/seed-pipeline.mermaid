@@ -1,0 +1,42 @@
+%% FINDTAX — Pipeline de setup do marketplace (make findtax-setup)
+%% Orquestrador: backend/src/scripts/seed-findtax.ts
+%% Idempotente — cada etapa pode rodar sozinha ou todas juntas via Makefile.
+
+flowchart TB
+  %% Entrada
+  CSV[/"📄 CSVs em backend/src/sample/<br/>app_provider · apps<br/>app_categories · app_sub_categories"/]
+  Make[["make findtax-setup<br/>(ou make findtax-bootstrap)"]]
+  CSV --> Make
+  Make --> Orq[["seed-findtax.ts<br/>orquestrador"]]
+
+  %% Etapas
+  Orq --> S1["1. setup-store<br/>store = FINDTAX<br/>currency BRL · region Brazil"]
+  S1 --> S2["2. setup-sellers<br/>29 sellers do CSV<br/>+ auth · stock-location<br/>+ fulfillment · shipping"]
+  S2 --> S3["3. setup-products<br/>39 produtos · 1 variant<br/>preço R$ 2k–10k seeded<br/>+ inventory items"]
+  S3 --> S4["4. setup-categories<br/>árvore 6+9<br/>vincula cada produto<br/>à sua principal real"]
+  S4 --> S5["5. setup-countries<br/>service_zone · geo_zone BR<br/>+ inventory_levels<br/>(cadeia supported_countries)"]
+
+  %% Pós-setup
+  S5 --> Algolia[["make algolia-sync<br/>POST /admin/algolia<br/>→ syncAlgoliaWorkflow"]]
+  Algolia --> Done[/"✅ Storefront em :3000<br/>produtos com busca + categoria + BR"/]
+
+  %% Caminhos paralelos
+  Orq -. "alt. SQL puro<br/>(Railway, sem backend)" .-> SQL[["📜 setup-categories.sql<br/>setup-countries.sql<br/>make ...-sql TARGET_URL=..."]]
+  SQL --> Algolia
+
+  %% Dump / restore para outro ambiente
+  Done -. "make findtax-dump" .-> Dump[/"backend/src/sample/<br/>findtax-seed.sql"/]
+  Dump -. "make findtax-restore<br/>TARGET_URL=postgres://..." .-> Railway[/"🚂 Railway / outro Postgres"/]
+
+  %% Reset
+  Reset["⚠️ make findtax-reset<br/>(TRUNCATE CASCADE)"] -. limpa .-> Orq
+
+  classDef step    fill:#e0e7ff,stroke:#4338ca,color:#1e1b4b
+  classDef io      fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef cmd     fill:#dcfce7,stroke:#16a34a,color:#14532d
+  classDef warn    fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+
+  class S1,S2,S3,S4,S5 step
+  class CSV,Dump,Railway,Done io
+  class Make,Orq,Algolia,SQL cmd
+  class Reset warn

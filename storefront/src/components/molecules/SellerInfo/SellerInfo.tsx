@@ -1,6 +1,7 @@
 import { StarRating } from "@/components/atoms"
 import { SellerAvatar } from "@/components/cells/SellerAvatar/SellerAvatar"
 import { SellerProps } from "@/types/seller"
+import { getSellerRating } from "@/lib/helpers/seller-rating"
 import { SellerReview } from "../SellerReview/SellerReview"
 
 export const SellerInfo = ({
@@ -12,16 +13,7 @@ export const SellerInfo = ({
 }) => {
   const { photo, name, reviews } = seller
 
-  const reviewCount = reviews
-    ? reviews?.filter((rev) => rev !== null).length
-    : 0
-
-  const rating =
-    reviews && reviews.length > 0
-      ? reviews
-          .filter((rev) => rev !== null)
-          .reduce((sum, r) => sum + r?.rating || 0, 0) / reviewCount
-      : 0
+  const { rating, reviewCount } = getSellerRating(reviews)
 
   return (
     <div className="flex gap-4 w-full">

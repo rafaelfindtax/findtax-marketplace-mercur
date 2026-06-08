@@ -1,0 +1,148 @@
+%% Infraestrutura AWS (proposta — ECS Fargate)
+%% Mesmo stack do local, em AWS managed services. Região exemplo: sa-east-1.
+%% Padrão: VPC com 2 AZs, ALB público, serviços ECS em subnets privadas,
+%% RDS Multi-AZ, ElastiCache, S3, CloudFront, Route 53 + ACM.
+
+graph TB
+  %% ===== Usuários =====
+  Users[👥 Usuários<br/>Clientes · Sellers · Admin]
+
+  %% ===== Edge =====
+  subgraph Edge["🌐 Edge global"]
+    Route53["Route 53<br/>DNS · findtax.com.br"]
+    CloudFront["CloudFront<br/>CDN para assets · Next/_next/static<br/>+ MinIO replacement public"]
+    ACM["ACM<br/>certificados TLS"]
+  end
+
+  %% ===== VPC =====
+  subgraph VPC["VPC findtax-prod · 10.0.0.0/16 (sa-east-1)"]
+    direction TB
+
+    %% Public subnets
+    subgraph PubSubs["🟢 Public subnets (AZ-a · AZ-b)"]
+      ALB["ALB<br/>marketplace-alb<br/>HTTPS :443<br/>host/path routing"]
+      NAT["NAT Gateway<br/>(AZ-a · saída internet)"]
+    end
+
+    %% Private subnets — apps
+    subgraph PrivAppSubs["🔵 Private subnets · apps (AZ-a · AZ-b)"]
+      direction LR
+      ECSCluster{{"ECS Cluster: marketplace<br/>Fargate"}}
+      subgraph Services["ECS Services (Fargate tasks)"]
+        SvcStore["svc-storefront<br/>Next.js · 2× tasks<br/>0.5 vCPU / 1 GB"]
+        SvcAdmin["svc-admin<br/>Vite build · 1× task<br/>0.25 vCPU / 0.5 GB"]
+        SvcVendor["svc-vendor<br/>Vite build · 1× task<br/>0.25 vCPU / 0.5 GB"]
+        SvcBackend["svc-backend<br/>MedusaJS · 2× tasks<br/>1 vCPU / 2 GB · autoscale CPU 70%"]
+        SvcWorker["svc-worker<br/>Medusa jobs / BullMQ · 1× task<br/>0.5 vCPU / 1 GB"]
+      end
+    end
+
+    %% Private subnets — data
+    subgraph PrivDataSubs["🟣 Private subnets · data (AZ-a · AZ-b)"]
+      RDS[("RDS PostgreSQL 16<br/>db.t4g.medium<br/>Multi-AZ · backups 7d<br/>db: mercurjs")]
+      ElastiCache[("ElastiCache Redis 7<br/>cache.t4g.micro<br/>2 nodes")]
+    end
+
+    %% Endpoints / SGs (implícitos)
+    SGAlb[/Security Group<br/>sg-alb · :443 from 0.0.0.0/0/]
+    SGApps[/Security Group<br/>sg-apps · from sg-alb/]
+    SGData[/Security Group<br/>sg-data · from sg-apps/]
+  end
+
+  %% ===== Managed services / armazenamento =====
+  subgraph Managed["Managed services"]
+    S3[("S3 Bucket<br/>findtax-media-prod<br/>imagens · assets")]
+    ECR[("ECR<br/>backend · storefront · admin · vendor")]
+    Secrets["Secrets Manager<br/>DATABASE_URL · REDIS_URL<br/>ALGOLIA_* · JWT_SECRET"]
+    SSM["SSM Parameter Store<br/>env vars não-sensíveis"]
+    CW["CloudWatch<br/>logs · métricas · alarms"]
+    IAM["IAM Roles<br/>task execution · task role"]
+  end
+
+  %% ===== CI/CD =====
+  subgraph CICD["CI/CD"]
+    GHA["GitHub Actions<br/>rafaelfindtax/findtax-marketplace-mercur"]
+  end
+
+  %% ===== Externos =====
+  Algolia[("☁️ Algolia<br/>SaaS")]
+  SES["AWS SES<br/>e-mails transacionais"]
+
+  %% ===== Fluxos de usuário =====
+  Users -->|HTTPS findtax.com.br| Route53
+  Route53 --> CloudFront
+  Route53 --> ALB
+  CloudFront -->|origin: S3 / ALB| S3
+  CloudFront -->|origin| ALB
+  ACM -. cert .-> ALB
+  ACM -. cert .-> CloudFront
+
+  %% ===== ALB → ECS (host/path) =====
+  ALB -->|findtax.com.br| SvcStore
+  ALB -->|admin.findtax.com.br| SvcAdmin
+  ALB -->|vendor.findtax.com.br| SvcVendor
+  ALB -->|api.findtax.com.br /| SvcBackend
+
+  %% ===== ECS interno =====
+  SvcStore --> SvcBackend
+  SvcAdmin --> SvcBackend
+  SvcVendor --> SvcBackend
+  SvcStore -.->|HTTPS · search-only key| Algolia
+
+  %% ===== Apps → Data =====
+  SvcBackend --> RDS
+  SvcBackend --> ElastiCache
+  SvcWorker --> RDS
+  SvcWorker --> ElastiCache
+  SvcBackend -->|S3 SDK · PutObject/GetObject| S3
+  SvcBackend -->|HTTPS · admin key| Algolia
+  SvcBackend --> SES
+
+  %% ===== Saída internet =====
+  SvcBackend -.via NAT.-> NAT
+  SvcWorker -.via NAT.-> NAT
+
+  %% ===== Segredos / config =====
+  Secrets -.inject env.-> SvcBackend
+  Secrets -.inject env.-> SvcWorker
+  SSM -.inject env.-> SvcStore
+  SSM -.inject env.-> SvcAdmin
+  SSM -.inject env.-> SvcVendor
+
+  %% ===== Observabilidade =====
+  SvcStore -.logs.-> CW
+  SvcAdmin -.logs.-> CW
+  SvcVendor -.logs.-> CW
+  SvcBackend -.logs · metrics.-> CW
+  SvcWorker -.logs.-> CW
+  RDS -.metrics · enhanced.-> CW
+  ElastiCache -.metrics.-> CW
+
+  %% ===== CI/CD =====
+  GHA -->|docker build + push| ECR
+  GHA -->|aws ecs update-service<br/>--force-new-deployment| ECSCluster
+  ECR -. pull .-> SvcStore
+  ECR -. pull .-> SvcAdmin
+  ECR -. pull .-> SvcVendor
+  ECR -. pull .-> SvcBackend
+  ECR -. pull .-> SvcWorker
+
+  %% ===== Estilo =====
+  classDef edge    fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef ecs     fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+  classDef data    fill:#dcfce7,stroke:#16a34a,color:#14532d
+  classDef mgd     fill:#fce7f3,stroke:#db2777,color:#831843
+  classDef sec     fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+  classDef cicd    fill:#e0e7ff,stroke:#4338ca,color:#1e1b4b
+  classDef ext     fill:#f3e8ff,stroke:#9333ea,color:#581c87
+  classDef user    fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef cluster fill:#f1f5f9,stroke:#475569,color:#0f172a
+
+  class Route53,CloudFront,ACM,ALB,NAT edge
+  class SvcStore,SvcAdmin,SvcVendor,SvcBackend,SvcWorker ecs
+  class RDS,ElastiCache,S3 data
+  class ECR,Secrets,SSM,CW,IAM mgd
+  class SGAlb,SGApps,SGData sec
+  class GHA,ECSCluster cicd
+  class Algolia,SES ext
+  class Users user
