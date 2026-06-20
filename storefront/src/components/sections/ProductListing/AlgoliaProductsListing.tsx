@@ -174,11 +174,10 @@ const ProductsListing = ({
           <AlgoliaProductSidebar />
         </div>
         <div className="w-full">
-          {!items.length ? (
+          {!items.length || (apiProducts !== null && !products.length) ? (
             <div className="text-center w-full my-10">
-              <h2 className="uppercase text-primary heading-lg">no results</h2>
               <p className="mt-4 text-lg">
-                Sorry, we can&apos;t find any results for your criteria
+                Nenhum produto encontrado para o filtro selecionado.
               </p>
             </div>
           ) : (

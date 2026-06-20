@@ -4,7 +4,12 @@ import useFilters from "@/hooks/useFilters"
 import { CloseIcon } from "@/icons"
 
 const filtersLabels = {
-  category: "Category",
+  category: "Categorias do Produto",
+  seller: "Nome do Fornecedor",
+  name: "Nome do Produto",
+  erp: "Integrações com ERP",
+  delivery: "Modelo de Entrega",
+  reviewed: "Produtos Avaliados",
   brand: "Brand",
   min_price: "Min Price",
   max_price: "Max Price",

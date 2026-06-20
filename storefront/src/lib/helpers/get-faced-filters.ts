@@ -11,6 +11,19 @@ const getOption = (label: string) => {
       return "variants.condition"
     case "rating":
       return "average_rating"
+    // Category-page faceted filters (feature 004-category-filters)
+    case "category":
+      return "categories.name"
+    case "seller":
+      return "seller.handle"
+    case "name":
+      return "title"
+    case "reviewed":
+      return "average_rating"
+    case "erp":
+      return "erp_integrations"
+    case "delivery":
+      return "delivery_models"
     default:
       return ""
   }
