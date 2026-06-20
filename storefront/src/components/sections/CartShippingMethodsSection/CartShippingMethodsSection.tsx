@@ -153,7 +153,9 @@ const CartShippingMethodsSection: React.FC<ShippingProps> = ({
     setError(null)
   }, [isOpen])
 
-  const groupedBySellerId = _shippingMethods?.reduce((acc: any, method) => {
+  const groupedBySellerId: Record<string, any[]> = (
+    _shippingMethods ?? []
+  ).reduce((acc: Record<string, any[]>, method) => {
     const sellerId = method.seller_id!
 
     if (!acc[sellerId]) {
@@ -171,7 +173,7 @@ const CartShippingMethodsSection: React.FC<ShippingProps> = ({
     }
 
     return acc
-  }, {})
+  }, {} as Record<string, any[]>)
 
   const handleEdit = () => {
     router.replace(pathname + "?step=delivery")

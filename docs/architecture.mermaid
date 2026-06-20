@@ -1,0 +1,65 @@
+%% FINDTAX Marketplace — arquitetura da aplicação
+%% Stack: MercurJS (b2c-core) sobre MedusaJS v2 + Next.js + React (Vite)
+%% Dev local: Docker Compose · Prod: Railway (futuro: AWS ECS/Fargate)
+
+graph TB
+  %% ===== Usuários =====
+  subgraph Users["Usuários"]
+    Cliente[👤 Cliente Final]
+    Vendor[🏪 Seller/Vendor]
+    Admin[🛠 Admin FINDTAX]
+  end
+
+  %% ===== Frontends =====
+  subgraph FE["Frontends"]
+    Storefront["🛒 Storefront<br/>Next.js 15 · :3000<br/>SSR + Algolia client"]
+    AdminPanel["📊 Admin Panel<br/>React + Vite · :5173<br/>Mercur admin UI"]
+    VendorPanel["📦 Vendor Panel<br/>React + Vite · :7001<br/>Mercur vendor UI"]
+  end
+
+  %% ===== Backend =====
+  subgraph BE["Backend API"]
+    BackendAPI["⚙️ Backend<br/>MedusaJS 2.10 · :9000<br/>@mercurjs/b2c-core<br/>@mercurjs/algolia<br/>@mercurjs/commission<br/>workflows + scripts FINDTAX"]
+  end
+
+  %% ===== Infra =====
+  subgraph Infra["Infra (Docker local · Railway prod)"]
+    Postgres[("🐘 PostgreSQL 16<br/>db: mercurjs<br/>~30 sellers, 39 produtos,<br/>15 categorias")]
+    Redis[("⚡ Redis 7<br/>cache · jobs · events")]
+    MinIO["🗄 MinIO (S3-compat)<br/>:9100 API · :9101 console<br/>bucket: medusa<br/>(prod: S3/R2)"]
+  end
+
+  %% ===== Externo =====
+  subgraph Ext["Serviços Externos"]
+    Algolia[("🔍 Algolia<br/>index: products<br/>filtros: supported_countries, sellers")]
+  end
+
+  %% ===== Acessos de usuário =====
+  Cliente -->|browse / search / checkout| Storefront
+  Vendor -->|gerenciar produtos / pedidos| VendorPanel
+  Admin -->|gerenciar plataforma| AdminPanel
+
+  %% ===== Fluxos FE → BE =====
+  Storefront -->|REST publishable key| BackendAPI
+  Storefront -.->|"/1/indexes/products/query<br/>(search direto)"| Algolia
+  AdminPanel -->|REST Bearer JWT| BackendAPI
+  VendorPanel -->|REST Bearer JWT| BackendAPI
+
+  %% ===== Fluxos BE → Infra =====
+  BackendAPI -->|Mikro-ORM · SQL| Postgres
+  BackendAPI -->|cache · BullMQ| Redis
+  BackendAPI -->|upload imagens / thumbs| MinIO
+  BackendAPI -->|"syncAlgoliaWorkflow<br/>POST /admin/algolia"| Algolia
+
+  %% ===== Estilo =====
+  classDef user   fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef fe     fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+  classDef be     fill:#e0e7ff,stroke:#4338ca,color:#1e1b4b
+  classDef infra  fill:#dcfce7,stroke:#16a34a,color:#14532d
+  classDef ext    fill:#fce7f3,stroke:#db2777,color:#831843
+
+  class Cliente,Vendor,Admin user
+  class Storefront,AdminPanel,VendorPanel fe
+  class BackendAPI be
+  class Postgres,Redis,MinIO infra
+  class Algolia ext

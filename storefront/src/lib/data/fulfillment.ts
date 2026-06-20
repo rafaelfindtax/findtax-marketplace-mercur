@@ -25,7 +25,7 @@ export const listCartShippingMethods = async (
         query: {
           cart_id: cartId,
           fields:
-            "+service_zone.fulfllment_set.type,*service_zone.fulfillment_set.location.address",
+            "+service_zone.fulfillment_set.type,*service_zone.fulfillment_set.location.address",
         },
         headers,
         next,
@@ -33,7 +33,8 @@ export const listCartShippingMethods = async (
       }
     )
     .then(({ shipping_options }) => shipping_options)
-    .catch(() => {
+    .catch((err) => {
+      console.error("[listCartShippingMethods] failed", err)
       return null
     })
 }
@@ -68,7 +69,8 @@ export const calculatePriceForShippingOption = async (
       }
     )
     .then(({ shipping_option }) => shipping_option)
-    .catch((e) => {
+    .catch((err) => {
+      console.error("[calculatePriceForShippingOption] failed", err)
       return null
     })
 }

@@ -1,0 +1,23 @@
+%% C4 Model — Nível 1: Diagrama de Contexto
+%% FINDTAX Marketplace — quem usa o sistema e com quem ele se integra.
+
+C4Context
+    title FINDTAX Marketplace — Diagrama de Contexto (C4 nível 1)
+
+    Person(cliente, "Cliente Final", "Empresa/contador que busca e contrata soluções fiscais e tributárias.")
+    Person(vendor, "Seller / Vendor", "Fornecedor (ex: Roit, Taxly, Sittax) que cadastra e gerencia produtos, preços e pedidos.")
+    Person(admin, "Admin FINDTAX", "Operador da plataforma: aprova sellers, define comissões, monitora indicadores.")
+
+    System(findtax, "FINDTAX Marketplace", "Marketplace B2B de soluções fiscais. Sellers cadastram produtos (SaaS, consultorias, cursos); clientes buscam, comparam e contratam pelo storefront.")
+
+    System_Ext(algolia, "Algolia", "Busca e indexação de produtos (search-as-a-service).")
+    System_Ext(email, "E-mail / Notificações", "Envio de transacionais (confirmação de pedido, recuperação de senha).")
+
+    Rel(cliente, findtax, "Navega no catálogo, busca, compra")
+    Rel(vendor, findtax, "Gerencia loja, produtos e pedidos")
+    Rel(admin, findtax, "Administra a plataforma")
+
+    Rel(findtax, algolia, "Indexa produtos e responde queries de busca", "HTTPS / Algolia API")
+    Rel(findtax, email, "Dispara e-mails transacionais", "SMTP")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="2")

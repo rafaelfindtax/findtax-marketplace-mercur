@@ -1,0 +1,46 @@
+%% C4 Model — Nível 2: Diagrama de Containers
+%% FINDTAX Marketplace — zoom no sistema: cada aplicação/serviço e como conversam.
+
+C4Container
+    title FINDTAX Marketplace — Diagrama de Containers (C4 nível 2)
+
+    Person(cliente, "Cliente Final", "Empresa/contador comprador")
+    Person(vendor, "Seller / Vendor", "Fornecedor de soluções fiscais")
+    Person(admin, "Admin FINDTAX", "Operador da plataforma")
+
+    System_Boundary(findtax, "FINDTAX Marketplace") {
+        Container(storefront, "Storefront", "Next.js 15 (SSR) · :3000", "Catálogo público, busca via Algolia, checkout. Usa publishable key + Algolia search-only key.")
+        Container(adminPanel, "Admin Panel", "React + Vite · :5173", "UI administrativa do Mercur: sellers, produtos globais, comissões, regiões, indicadores.")
+        Container(vendorPanel, "Vendor Panel", "React + Vite · :7001", "UI do seller: produtos, pedidos, estoque, configurações da loja.")
+
+        Container(backend, "Backend API", "MedusaJS 2.10 + MercurJS (b2c-core, commission, algolia) · :9000", "REST API, workflows, jobs assíncronos, scripts de seed FINDTAX (sellers, produtos, categorias, países).")
+
+        ContainerDb(postgres, "PostgreSQL", "Postgres 16 · db: mercurjs", "Estado completo: sellers, produtos, variants, inventory, categorias, regions, pedidos.")
+        ContainerDb(redis, "Redis", "Redis 7", "Cache · filas BullMQ · barramento de eventos.")
+        ContainerDb(minio, "Object Storage", "MinIO (S3-compatible) · :9100/:9101", "Upload e serve de imagens de produtos/sellers. Prod: AWS S3 / R2.")
+    }
+
+    System_Ext(algolia, "Algolia", "SaaS de busca; índice 'products' alimentado pelo plugin Mercur Algolia.")
+    System_Ext(email, "E-mail", "SMTP transacional.")
+
+    %% Acessos de usuário
+    Rel(cliente, storefront, "Usa", "HTTPS")
+    Rel(admin, adminPanel, "Usa", "HTTPS")
+    Rel(vendor, vendorPanel, "Usa", "HTTPS")
+
+    %% FE → BE
+    Rel(storefront, backend, "Catálogo, carrinho, checkout", "REST · publishable key")
+    Rel(storefront, algolia, "Busca de produtos", "HTTPS · search-only key")
+    Rel(adminPanel, backend, "Administração", "REST · JWT")
+    Rel(vendorPanel, backend, "Gerência da loja", "REST · JWT")
+
+    %% BE → Infra
+    Rel(backend, postgres, "Lê/escreve", "Mikro-ORM · SQL")
+    Rel(backend, redis, "Cache, filas, eventos", "RESP")
+    Rel(backend, minio, "Upload/serve imagens", "S3 API · HTTPS")
+
+    %% BE → Externos
+    Rel(backend, algolia, "Indexa produtos (syncAlgoliaWorkflow)", "HTTPS · admin key")
+    Rel(backend, email, "Notificações transacionais", "SMTP")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="2")

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /tmp/cat3.html -w \"HTTP %{http_code}\\\\n\" --max-time 120 -A \"Googlebot/2.1\" \"http://localhost:3000/br/categories\")",
+      "Bash(.specify/extensions/git/scripts/bash/auto-commit.sh after_implement)",
+      "Bash(git add *)",
+      "Bash(git commit -q -m ' *)",
+      "Bash(npm ls *)",
+      "Bash(npm view *)"
+    ]
+  }
+}
